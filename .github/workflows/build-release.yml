@@ -1,0 +1,51 @@
+name: Build and Release iOS IPA
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-ipa:
+    name: Build iOS IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Resolve Swift Packages
+        run: xcodebuild -resolvePackageDependencies -project DockhandMobile.xcodeproj -scheme DockhandMobile
+
+      - name: Build Archive
+        run: |
+          xcodebuild archive \
+            -project DockhandMobile.xcodeproj \
+            -scheme DockhandMobile \
+            -configuration Release \
+            -archivePath $PWD/build/DockhandMobile.xcarchive \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+      - name: Export IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/DockhandMobile.xcarchive/Products/Applications/*.app build/Payload/
+          cd build && zip -r DockhandMobile.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: build/DockhandMobile.ipa
+
+      - name: Create GitHub Release and Upload Asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: build/DockhandMobile.ipa
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
