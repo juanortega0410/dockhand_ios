@@ -9,6 +9,10 @@ jobs:
   build-ipa:
     name: Build iOS IPA
     runs-on: macos-latest
+    
+    # ADD THESE TWO LINES HERE:
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
